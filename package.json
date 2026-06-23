@@ -1,0 +1,26 @@
+{
+  "name": "queue-cure",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Queue Cure 26 monorepo for real-time clinic queue management.",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @queue-cure/web dev",
+    "dev:web": "pnpm --filter @queue-cure/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r exec rimraf .next dist node_modules/.cache"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "typescript-eslint": "^8.18.2"
+  }
+}

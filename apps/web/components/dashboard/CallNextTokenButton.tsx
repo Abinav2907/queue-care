@@ -9,7 +9,7 @@ export function CallNextTokenButton({
   disabled,
   loading
 }: {
-  onCallNext: () => Promise<void>;
+  onCallNext: () => Promise<unknown>;
   disabled: boolean;
   loading: boolean;
 }) {

@@ -6,7 +6,7 @@ import { registerSocketHandlers } from "./handlers";
 export function createSocketServer(server: HttpServer): Server {
   const io = new Server(server, {
     cors: {
-      origin: env.clientOrigin,
+      origin: env.allowedOrigins,
       methods: ["GET", "POST", "PATCH"]
     }
   });

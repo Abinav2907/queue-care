@@ -1,5 +1,6 @@
 "use client";
 
+import type { Doctor, PriorityLevel } from "@queue-cure/shared";
 import { UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -8,12 +9,16 @@ import { useToast } from "@/providers/SocketProvider";
 
 export function AddPatientForm({
   onAdd,
-  loading
+  loading,
+  doctors
 }: {
-  onAdd: (patientName: string) => Promise<void>;
+  onAdd: (input: { patientName: string; doctorId?: string; priority?: PriorityLevel }) => Promise<unknown>;
   loading: boolean;
+  doctors: Doctor[];
 }) {
   const [patientName, setPatientName] = useState("");
+  const [doctorId, setDoctorId] = useState(doctors[0]?.id ?? "");
+  const [priority, setPriority] = useState<PriorityLevel>("normal");
   const { notify } = useToast();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -22,7 +27,7 @@ export function AddPatientForm({
     if (!name) return;
 
     try {
-      await onAdd(name);
+      await onAdd({ patientName: name, doctorId, priority });
       setPatientName("");
       notify({ title: "Patient added", description: `${name} joined the queue.`, tone: "success" });
     } catch (error) {
@@ -35,7 +40,7 @@ export function AddPatientForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
+    <form onSubmit={handleSubmit} className="grid gap-3">
       <Input
         value={patientName}
         onChange={(event) => setPatientName(event.target.value)}
@@ -45,7 +50,30 @@ export function AddPatientForm({
         maxLength={80}
         required
       />
-      <Button type="submit" loading={loading} className="sm:w-44">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <select
+          value={doctorId}
+          onChange={(event) => setDoctorId(event.target.value)}
+          className="h-11 rounded-md border border-white/10 bg-background px-3 text-sm text-foreground"
+        >
+          {doctors.map((doctor) => (
+            <option key={doctor.id} value={doctor.id}>
+              {doctor.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={priority}
+          onChange={(event) => setPriority(event.target.value as PriorityLevel)}
+          className="h-11 rounded-md border border-white/10 bg-background px-3 text-sm text-foreground"
+        >
+          <option value="normal">Normal</option>
+          <option value="priority">Priority</option>
+          <option value="urgent">Urgent</option>
+          <option value="emergency">Emergency</option>
+        </select>
+      </div>
+      <Button type="submit" loading={loading}>
         <UserPlus className="size-4" />
         Add Patient
       </Button>

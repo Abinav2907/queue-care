@@ -3,6 +3,7 @@
 import type { Patient } from "@queue-cure/shared";
 import { Clock, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
+import { TokenQRCode } from "./TokenQRCode";
 
 export function TokenCard({ patient, index }: { patient: Patient; index: number }) {
   const statusStyles = {
@@ -35,12 +36,15 @@ export function TokenCard({ patient, index }: { patient: Patient; index: number 
           </p>
         </div>
       </div>
-      <span
-        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${statusStyles[patient.status]}`}
-      >
-        <UserRound className="size-3" />
-        {patient.status}
-      </span>
+      <div className="flex shrink-0 items-center gap-3">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${statusStyles[patient.status]}`}
+        >
+          <UserRound className="size-3" />
+          {patient.priority} · {patient.status}
+        </span>
+        <TokenQRCode patient={patient} />
+      </div>
     </motion.li>
   );
 }

@@ -4,10 +4,22 @@ import { getQueueState } from "../services/queueService";
 
 export function registerSocketHandlers(io: Server): void {
   io.on("connection", async (socket) => {
-    socket.emit(SOCKET_EVENTS.QUEUE_STATE, await getQueueState());
+    try {
+      socket.emit(SOCKET_EVENTS.QUEUE_STATE, await getQueueState());
+    } catch (error) {
+      socket.emit("queue:error", {
+        message: error instanceof Error ? error.message : "Unable to load queue state"
+      });
+    }
 
     socket.on("queue:sync", async () => {
-      socket.emit(SOCKET_EVENTS.QUEUE_STATE, await getQueueState());
+      try {
+        socket.emit(SOCKET_EVENTS.QUEUE_STATE, await getQueueState());
+      } catch (error) {
+        socket.emit("queue:error", {
+          message: error instanceof Error ? error.message : "Unable to sync queue state"
+        });
+      }
     });
   });
 }

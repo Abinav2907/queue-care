@@ -1,23 +1,104 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Loader2, MapPin } from "lucide-react";
+import { AlertCircle, CheckCircle2, MapPin, Search, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { CurrentToken } from "@/components/waiting-room/CurrentToken";
 import { EstimatedWaitTime } from "@/components/waiting-room/EstimatedWaitTime";
 import { TokensAhead } from "@/components/waiting-room/TokensAhead";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import { Stat } from "@/components/ui/Stat";
 import { useQueue } from "@/hooks/useQueue";
+import { fetchPatientTracking } from "@/lib/api";
+import { buildPatientTrackingView } from "@/lib/queue/tracking";
+import type { PatientQueueView } from "@queue-cure/shared";
+
+const TRACKED_TOKEN_KEY = "queue-cure-tracked-token";
 
 export default function WaitingRoomPage() {
+  const searchParams = useSearchParams();
   const { queueState, loading, error, connected } = useQueue();
-  const currentToken = queueState?.currentToken?.tokenNumber ?? null;
-  const nextWaiting = queueState?.waitingPatients[0] ?? null;
-  const tokensAhead = nextWaiting
-    ? queueState?.waitingPatients.filter((patient) => patient.tokenNumber < nextWaiting.tokenNumber).length ?? 0
-    : 0;
-  const estimatedWait = tokensAhead * (queueState?.settings.avgConsultationTime ?? 0);
-  const queuePosition = nextWaiting ? tokensAhead + 1 : null;
+  const [tokenInput, setTokenInput] = useState("");
+  const [trackedToken, setTrackedToken] = useState<number | null>(null);
+  const [tracking, setTracking] = useState<PatientQueueView | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tokenFromUrl = searchParams.get("token");
+    if (tokenFromUrl) {
+      const tokenNumber = Number(tokenFromUrl);
+      if (Number.isInteger(tokenNumber) && tokenNumber > 0) {
+        setTrackedToken(tokenNumber);
+        setTokenInput(String(tokenNumber));
+        window.localStorage.setItem(TRACKED_TOKEN_KEY, String(tokenNumber));
+        return;
+      }
+    }
+
+    const savedToken = window.localStorage.getItem(TRACKED_TOKEN_KEY);
+    if (!savedToken) return;
+
+    const tokenNumber = Number(savedToken);
+    if (Number.isInteger(tokenNumber) && tokenNumber > 0) {
+      setTrackedToken(tokenNumber);
+      setTokenInput(String(tokenNumber));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!queueState || !trackedToken) return;
+
+    const liveTracking = buildPatientTrackingView(queueState, trackedToken);
+    if (liveTracking) {
+      setTracking(liveTracking);
+      setTrackingError(null);
+    }
+  }, [queueState, trackedToken]);
+
+  async function handleTrackPatient(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const tokenNumber = Number(tokenInput);
+
+    if (!Number.isInteger(tokenNumber) || tokenNumber < 1) {
+      setTrackingError("Enter a valid positive token number.");
+      setTracking(null);
+      return;
+    }
+
+    setTrackingLoading(true);
+    setTrackingError(null);
+
+    try {
+      const result = await fetchPatientTracking(tokenNumber);
+      setTrackedToken(tokenNumber);
+      setTracking(result);
+      window.localStorage.setItem(TRACKED_TOKEN_KEY, String(tokenNumber));
+    } catch (err) {
+      setTrackedToken(null);
+      setTracking(null);
+      window.localStorage.removeItem(TRACKED_TOKEN_KEY);
+      setTrackingError(err instanceof Error ? err.message : "Unable to track this token.");
+    } finally {
+      setTrackingLoading(false);
+    }
+  }
+
+  const currentServingPatient = tracking?.currentServingPatient ?? queueState?.currentToken ?? null;
+  const currentToken = currentServingPatient?.tokenNumber ?? null;
+  const display = useMemo(
+    () => ({
+      myToken: tracking?.patient.tokenNumber ?? null,
+      tokensAhead: tracking?.tokensAhead ?? 0,
+      estimatedWait: tracking?.estimatedWaitTime ?? 0,
+      queuePosition: tracking?.queuePosition ?? null,
+      statusMessage: tracking?.statusMessage ?? "Enter your token number to track your position."
+    }),
+    [tracking]
+  );
 
   return (
     <main className="min-h-screen overflow-hidden bg-background px-4 py-6 text-foreground sm:px-6 lg:px-8">
@@ -60,16 +141,44 @@ export default function WaitingRoomPage() {
           </div>
         ) : (
           <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
-            <CurrentToken token={currentToken} />
+            <CurrentToken token={currentToken} patient={currentServingPatient} />
             <div className="space-y-4">
-              <TokensAhead value={tokensAhead} />
-              <EstimatedWaitTime minutes={estimatedWait} />
-              <Stat label="Queue Position" value={queuePosition ?? "--"} icon={MapPin} accent="text-accent" />
+              <Card className="p-5">
+                <form onSubmit={handleTrackPatient} className="space-y-3">
+                  <label>
+                    <span className="mb-2 block text-sm font-medium text-muted-foreground">
+                      Enter Your Token Number
+                    </span>
+                    <Input
+                      type="number"
+                      min={1}
+                      inputMode="numeric"
+                      value={tokenInput}
+                      onChange={(event) => setTokenInput(event.target.value)}
+                      placeholder="Token number"
+                      aria-label="Enter your token number"
+                    />
+                  </label>
+                  <Button type="submit" loading={trackingLoading} className="w-full">
+                    <Search className="size-4" />
+                    Track My Position
+                  </Button>
+                </form>
+                {trackingError ? (
+                  <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {trackingError}
+                  </p>
+                ) : null}
+              </Card>
+              <Stat label="My Token Number" value={display.myToken ?? "--"} icon={Ticket} />
+              <TokensAhead value={display.tokensAhead} />
+              <EstimatedWaitTime minutes={display.estimatedWait} />
+              <Stat label="Queue Position" value={display.queuePosition ?? "--"} icon={MapPin} accent="text-accent" />
               <Card className="p-5">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-1 size-5 text-primary" />
                   <div>
-                    <p className="font-semibold">Live status updates</p>
+                    <p className="font-semibold">{display.statusMessage}</p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       This screen updates automatically through Socket.IO when reception calls the next token.
                     </p>

@@ -1,11 +1,16 @@
 "use client";
 
-import { SOCKET_EVENTS, type QueueState } from "@queue-cure/shared";
+import { SOCKET_EVENTS, type CreatePatientInput, type QueueState } from "@queue-cure/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   callNextToken,
+  callNextTokenForDoctor,
+  completeConsultationForDoctor,
   createPatient,
   fetchQueueState,
+  pauseDoctorQueue,
+  resumeDoctorQueue,
+  updateDoctorAvailability,
   updateAverageConsultationTime
 } from "@/lib/api";
 import { useSocket } from "./useSocket";
@@ -50,11 +55,15 @@ export function useQueue() {
 
   const actions = useMemo(
     () => ({
-      addPatient: async (patientName: string) => {
+      addPatient: async (patientNameOrInput: string | CreatePatientInput, input?: CreatePatientInput) => {
         setMutating(true);
         setError(null);
         try {
-          const result = await createPatient({ patientName });
+          const payload =
+            typeof patientNameOrInput === "string"
+              ? { ...(input ?? {}), patientName: patientNameOrInput }
+              : patientNameOrInput;
+          const result = await createPatient(payload);
           setQueueState(result.queueState);
           return result.queueState;
         } catch (err) {
@@ -80,6 +89,36 @@ export function useQueue() {
           setMutating(false);
         }
       },
+      callNextForDoctor: async (doctorId: string) => {
+        setMutating(true);
+        setError(null);
+        try {
+          const result = await callNextTokenForDoctor(doctorId);
+          setQueueState(result.queueState);
+          return result.queueState;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unable to call next token";
+          setError(message);
+          throw err;
+        } finally {
+          setMutating(false);
+        }
+      },
+      completeConsultationForDoctor: async (doctorId: string) => {
+        setMutating(true);
+        setError(null);
+        try {
+          const result = await completeConsultationForDoctor(doctorId);
+          setQueueState(result.queueState);
+          return result.queueState;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unable to complete consultation";
+          setError(message);
+          throw err;
+        } finally {
+          setMutating(false);
+        }
+      },
       updateAverageTime: async (avgConsultationTime: number) => {
         setMutating(true);
         setError(null);
@@ -91,6 +130,36 @@ export function useQueue() {
           const message = err instanceof Error ? err.message : "Unable to update settings";
           setError(message);
           throw err;
+        } finally {
+          setMutating(false);
+        }
+      },
+      pauseQueue: async (doctorId: string) => {
+        setMutating(true);
+        try {
+          const state = await pauseDoctorQueue(doctorId);
+          setQueueState(state);
+          return state;
+        } finally {
+          setMutating(false);
+        }
+      },
+      resumeQueue: async (doctorId: string) => {
+        setMutating(true);
+        try {
+          const state = await resumeDoctorQueue(doctorId);
+          setQueueState(state);
+          return state;
+        } finally {
+          setMutating(false);
+        }
+      },
+      setDoctorAvailability: async (doctorId: string, availability: Parameters<typeof updateDoctorAvailability>[1]) => {
+        setMutating(true);
+        try {
+          const result = await updateDoctorAvailability(doctorId, availability);
+          setQueueState(result.queueState);
+          return result.queueState;
         } finally {
           setMutating(false);
         }

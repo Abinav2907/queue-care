@@ -1,6 +1,6 @@
-import { Router } from "express";
+import { Router, type Router as ExpressRouter } from "express";
 
-export const healthRoutes = Router();
+export const healthRoutes: ExpressRouter = Router();
 
 healthRoutes.get("/", (_req, res) => {
   res.json({

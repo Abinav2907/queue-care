@@ -13,7 +13,7 @@ export function AverageConsultationTime({
 }: {
   value: number;
   loading: boolean;
-  onUpdate: (value: number) => Promise<void>;
+  onUpdate: (value: number) => Promise<unknown>;
 }) {
   const [draft, setDraft] = useState(value);
   const { notify } = useToast();

@@ -20,10 +20,44 @@ const pausedDoctorIds = new Set<string>();
 
 const priorityWeight = {
   emergency: 0,
-  urgent: 0.5,
+  urgent: 0.75,
   priority: 0.75,
   normal: 1
 };
+
+function getPriorityWeight(patient: Patient): number {
+  return priorityWeight[patient.priority] ?? 1;
+}
+
+function getPatientWaitMinutes(
+  patient: Patient,
+  allPatients: Patient[],
+  avgConsultationTime: number
+): number {
+  if (patient.priority === "emergency") return 0;
+
+  const doctorPatientsAhead = allPatients
+    .filter(
+      (item) =>
+        item.doctorId === patient.doctorId &&
+        (item.status === "serving" ||
+          (item.status === "waiting" && item.tokenNumber < patient.tokenNumber))
+    )
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === "serving" ? -1 : 1;
+      return a.tokenNumber - b.tokenNumber;
+    });
+
+  return Math.max(
+    0,
+    Math.round(
+      doctorPatientsAhead.reduce(
+        (total, item) => total + avgConsultationTime * getPriorityWeight(item),
+        0
+      )
+    )
+  );
+}
 
 export async function getDoctors(): Promise<Doctor[]> {
   return listDoctors();
@@ -63,44 +97,45 @@ export async function notifyPatient(input: NotificationRequest): Promise<Notific
 }
 
 export function buildTimeline(
-  waitingPatients: Patient[],
+  queuePatients: Patient[],
   avgConsultationTime: number
 ): QueueTimelineItem[] {
-  let elapsed = 0;
-  return waitingPatients.map((patient) => {
-    const item: QueueTimelineItem = {
+  return queuePatients
+    .filter((patient) => patient.status === "waiting")
+    .map((patient) => {
+    return {
       id: patient.id,
       tokenNumber: patient.tokenNumber,
       patientName: patient.patientName,
       doctorId: patient.doctorId,
       status: patient.status,
       priority: patient.priority,
-      estimatedStartInMinutes: Math.round(elapsed)
+      estimatedStartInMinutes: getPatientWaitMinutes(patient, queuePatients, avgConsultationTime)
     };
-    elapsed += avgConsultationTime * priorityWeight[patient.priority];
-    return item;
   });
 }
 
 export function predictWaitTimes(
-  waitingPatients: Patient[],
+  queuePatients: Patient[],
   avgConsultationTime: number,
   activeDoctorCount: number
 ): WaitTimePrediction[] {
-  const doctorCapacity = Math.max(1, activeDoctorCount);
-  return waitingPatients.map((patient, index) => {
-    const priorityBoost = priorityWeight[patient.priority];
-    const predictedWaitMinutes = Math.max(
-      0,
-      Math.round(((index * avgConsultationTime) / doctorCapacity) * priorityBoost)
+  const waitingPatients = queuePatients.filter((patient) => patient.status === "waiting");
+  return waitingPatients.map((patient) => {
+    const doctorWaitingCount = queuePatients.filter(
+      (item) => item.doctorId === patient.doctorId
+    ).length;
+    const predictedWaitMinutes = getPatientWaitMinutes(
+      patient,
+      queuePatients,
+      avgConsultationTime
     );
-
     return {
       tokenNumber: patient.tokenNumber,
       predictedWaitMinutes,
       confidence: patient.priority === "normal" ? 0.82 : 0.74,
       factors: [
-        `${waitingPatients.length} waiting`,
+        `${doctorWaitingCount} waiting for this doctor`,
         `${activeDoctorCount} active doctors`,
         `${patient.priority} priority`,
         `${avgConsultationTime} min average consultation`

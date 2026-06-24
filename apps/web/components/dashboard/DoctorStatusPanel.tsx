@@ -41,11 +41,12 @@ export function DoctorStatusPanel({
           const currentPatient = patients.find(
             (patient) => patient.doctorId === doctor.id && patient.status === "serving"
           );
-          const waitingPatients = patients.filter(
-            (patient) => patient.doctorId === doctor.id && patient.status === "waiting"
-          );
+          const waitingPatients = patients
+            .filter((patient) => patient.doctorId === doctor.id && patient.status === "waiting")
+            .sort((a, b) => a.tokenNumber - b.tokenNumber);
           const nextPatient = waitingPatients[0];
           const queueLength = waitingPatients.length;
+          const unavailable = paused || doctor.availability !== "available";
 
           return (
             <div
@@ -111,7 +112,7 @@ export function DoctorStatusPanel({
               <div className="mt-auto grid grid-cols-2 gap-2 pt-3">
                 <Button
                   type="button"
-                  disabled={Boolean(currentPatient) || !queueLength || paused || doctor.availability === "offline"}
+                  disabled={Boolean(currentPatient) || !queueLength || unavailable}
                   onClick={() => onCallNext(doctor.id)}
                 >
                   Call Next

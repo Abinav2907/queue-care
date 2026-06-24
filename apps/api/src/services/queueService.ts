@@ -66,7 +66,11 @@ export async function getQueueState(): Promise<QueueState> {
         : 0;
       return aTime - bTime;
     });
-  const timeline = buildTimeline(waitingPatients, settings.avgConsultationTime);
+  const queueCalculationPatients = [...currentTokens, ...waitingPatients];
+  const timeline = buildTimeline(
+    queueCalculationPatients,
+    settings.avgConsultationTime,
+  );
 
   return {
     patients,
@@ -80,7 +84,7 @@ export async function getQueueState(): Promise<QueueState> {
     auditLogs,
     timeline,
     predictions: predictWaitTimes(
-      waitingPatients,
+      queueCalculationPatients,
       settings.avgConsultationTime,
       activeDoctorIds.length,
     ),
@@ -210,14 +214,24 @@ export async function getPatientQueueView(
 
   const doctorQueue = queueState.patients
     .filter(
-      (item) => item.doctorId === patient.doctorId && item.status === "waiting",
+      (item) =>
+        item.doctorId === patient.doctorId &&
+        (item.status === "serving" || item.status === "waiting"),
     )
     .sort((a, b) => a.tokenNumber - b.tokenNumber);
-  const waitingIndex = doctorQueue.findIndex((item) => item.id === patient.id);
-  const queuePosition = waitingIndex >= 0 ? waitingIndex + 1 : null;
-  const tokensAhead = queuePosition ? queuePosition - 1 : 0;
+  const patientIndex = doctorQueue.findIndex((item) => item.id === patient.id);
+  const queuePosition =
+    patient.status === "waiting" && patientIndex >= 0 ? patientIndex + 1 : null;
+  const tokensAhead =
+    patient.status === "waiting" && patientIndex >= 0 ? patientIndex : 0;
   const estimatedWaitTime =
-    tokensAhead * queueState.settings.avgConsultationTime;
+    patient.status === "waiting"
+      ? calculateDoctorScopedWait(
+          patient,
+          doctorQueue,
+          queueState.settings.avgConsultationTime,
+        )
+      : 0;
 
   const statusMessage =
     patient.status === "serving"
@@ -241,4 +255,35 @@ export async function getPatientQueueView(
     queuePosition,
     statusMessage,
   };
+}
+
+function getPriorityWeight(patient: Patient): number {
+  if (patient.priority === "emergency") return 0;
+  if (patient.priority === "urgent" || patient.priority === "priority") return 0.75;
+  return 1;
+}
+
+function calculateDoctorScopedWait(
+  patient: Patient,
+  doctorQueue: Patient[],
+  avgConsultationTime: number,
+): number {
+  if (patient.priority === "emergency") return 0;
+
+  return Math.max(
+    0,
+    Math.round(
+      doctorQueue
+        .filter(
+          (item) =>
+            item.id !== patient.id &&
+            (item.status === "serving" ||
+              (item.status === "waiting" && item.tokenNumber < patient.tokenNumber)),
+        )
+        .reduce(
+          (total, item) => total + avgConsultationTime * getPriorityWeight(item),
+          0,
+        ),
+    ),
+  );
 }

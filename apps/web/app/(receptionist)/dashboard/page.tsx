@@ -60,8 +60,8 @@ export default function ReceptionistDashboardPage() {
             </div>
           ) : null}
 
-          <section className="grid gap-5 xl:grid-cols-[7fr_3fr]">
-            <Card className="flex h-[450px] min-h-0 flex-col p-4 sm:p-5 md:h-[550px] xl:h-[650px]">
+          <section className="grid gap-5 lg:grid-cols-[7fr_3fr]">
+            <Card className="flex h-[450px] min-h-0 flex-col p-4 sm:p-5 md:h-[550px] lg:h-[650px]">
               <div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
                   <h2 className="text-xl font-semibold">Queue List</h2>
@@ -81,7 +81,7 @@ export default function ReceptionistDashboardPage() {
               )}
             </Card>
 
-            <section className="h-[450px] min-h-0 md:h-[550px] xl:h-[650px]">
+            <section className="h-[450px] min-h-0 md:h-[550px] lg:h-[650px]">
               <AppointmentBooking
                 doctors={doctors}
                 appointmentPatients={appointmentPatients}
@@ -90,7 +90,7 @@ export default function ReceptionistDashboardPage() {
             </section>
           </section>
 
-          <section className="grid gap-5 xl:grid-cols-[7fr_3fr]">
+          <section className="grid gap-5 lg:grid-cols-[7fr_3fr]">
             {queueState ? (
               <DoctorStatusPanel
                 doctors={doctors}
@@ -127,15 +127,6 @@ export default function ReceptionistDashboardPage() {
                           <p>Room {patient.room}</p>
                         </div>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Started{" "}
-                        {patient.consultationStartTime
-                          ? new Date(patient.consultationStartTime).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit"
-                            })
-                          : "--"}
-                      </p>
                     </div>
                   ))
                 ) : (

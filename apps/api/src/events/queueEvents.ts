@@ -7,6 +7,19 @@ export function emitQueueState(io: Server, queueState: QueueState): void {
   io.emit(SOCKET_EVENTS.QUEUE_STATE, queueState);
 }
 
+export function emitQueueReset(
+  io: Server,
+  queueState: QueueState,
+  metadata: {
+    resetTimestamp: string;
+    totalPatientsRemoved: number;
+    totalAppointmentsCleared: number;
+  }
+): void {
+  io.emit(SOCKET_EVENTS.QUEUE_RESET, { ...metadata, queueState });
+  emitQueueState(io, queueState);
+}
+
 export function emitPatientAdded(io: Server, patient: Patient, queueState: QueueState): void {
   io.emit(SOCKET_EVENTS.PATIENT_ADDED, patient);
   emitQueueState(io, queueState);

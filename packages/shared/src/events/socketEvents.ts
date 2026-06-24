@@ -1,6 +1,7 @@
 export const SOCKET_EVENTS = {
   QUEUE_STATE: "queue:state",
   QUEUE_UPDATED: "queue:updated",
+  QUEUE_RESET: "queue:reset",
   PATIENT_ADDED: "patient:added",
   TOKEN_CALLED: "token:called",
   SETTINGS_UPDATED: "settings:updated",

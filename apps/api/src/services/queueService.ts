@@ -7,7 +7,9 @@ import type {
 import {
   createPatient,
   findPatientByToken,
+  filterLiveQueuePatients,
   listPatients,
+  resetDailyQueue,
   updatePatientStatus,
 } from "../repositories/patientRepository";
 import {
@@ -26,12 +28,13 @@ import {
 } from "./platformService";
 
 export async function getQueueState(): Promise<QueueState> {
-  const [patients, settings, doctors, auditLogs] = await Promise.all([
+  const [allPatients, settings, doctors, auditLogs] = await Promise.all([
     listPatients(),
     getSettings(),
     getDoctors(),
     getAuditLogs(),
   ]);
+  const patients = filterLiveQueuePatients(allPatients);
   const pausedDoctorIds = getPausedDoctorIds();
   const activeDoctorIds = doctors
     .filter(
@@ -55,7 +58,7 @@ export async function getQueueState(): Promise<QueueState> {
     (patient) => patient.status === "serving",
   );
   const currentToken = currentTokens[0] ?? null;
-  const appointmentPatients = patients
+  const appointmentPatients = allPatients
     .filter((patient) => Boolean(patient.appointmentTime))
     .sort((a, b) => {
       const aTime = a.appointmentTime
@@ -111,7 +114,7 @@ export async function addPatient(input: CreatePatientInput): Promise<Patient> {
 
 export async function callNextToken(doctorId?: string): Promise<Patient> {
   assertQueueIsCallable(doctorId);
-  const patients = await listPatients();
+  const patients = filterLiveQueuePatients(await listPatients());
   const activePatient = patients.find(
     (patient) =>
       patient.status === "serving" &&
@@ -147,7 +150,7 @@ export async function completeConsultation(doctorId: string): Promise<{
   completedPatient: Patient;
   nextPatient: Patient | null;
 }> {
-  const patients = await listPatients();
+  const patients = filterLiveQueuePatients(await listPatients());
   const activePatient = patients.find(
     (patient) => patient.doctorId === doctorId && patient.status === "serving",
   );
@@ -171,7 +174,7 @@ export async function completeConsultation(doctorId: string): Promise<{
     consultationEndTime: completedPatient.consultationEndTime,
   });
 
-  const refreshedPatients = await listPatients();
+  const refreshedPatients = filterLiveQueuePatients(await listPatients());
   const nextWaitingPatient = refreshedPatients
     .filter(
       (patient) =>
@@ -198,6 +201,25 @@ export async function completeConsultation(doctorId: string): Promise<{
 
 export async function updateSettings(avgConsultationTime: number) {
   return persistSettings(avgConsultationTime);
+}
+
+export async function resetQueueForNewDay(): Promise<{
+  resetTimestamp: string;
+  totalPatientsRemoved: number;
+  totalAppointmentsCleared: number;
+  queueState: QueueState;
+}> {
+  const resetResult = await resetDailyQueue();
+  const { addAuditLog } = await import("../repositories/platformRepository");
+  await addAuditLog("QUEUE_RESET", "queue", null, {
+    resetTimestamp: resetResult.resetTimestamp,
+    totalPatientsRemoved: resetResult.totalPatientsRemoved,
+    totalAppointmentsCleared: resetResult.totalAppointmentsCleared,
+  });
+  return {
+    ...resetResult,
+    queueState: await getQueueState(),
+  };
 }
 
 export async function getPatientQueueView(

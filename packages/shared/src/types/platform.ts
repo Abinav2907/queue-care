@@ -10,6 +10,7 @@ export type AuditAction =
   | "doctor.updated"
   | "queue.paused"
   | "queue.resumed"
+  | "QUEUE_RESET"
   | "appointment.created"
   | "notification.queued";
 

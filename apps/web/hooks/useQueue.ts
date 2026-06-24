@@ -13,10 +13,19 @@ import {
   updateDoctorAvailability,
   updateAverageConsultationTime
 } from "@/lib/api";
+import { useToast } from "@/providers/SocketProvider";
 import { useSocket } from "./useSocket";
+
+interface QueueResetPayload {
+  queueState: QueueState;
+  resetTimestamp: string;
+  totalPatientsRemoved: number;
+  totalAppointmentsCleared: number;
+}
 
 export function useQueue() {
   const { socket, connected } = useSocket();
+  const { notify } = useToast();
   const [queueState, setQueueState] = useState<QueueState | null>(null);
   const [loading, setLoading] = useState(true);
   const [mutating, setMutating] = useState(false);
@@ -43,15 +52,24 @@ export function useQueue() {
       setError(null);
     }
 
+    function handleReset(payload: QueueResetPayload) {
+      setQueueState(payload.queueState);
+      setLoading(false);
+      setError(null);
+      notify({ title: "Daily queue reset completed.", tone: "success" });
+    }
+
     socket.on(SOCKET_EVENTS.QUEUE_STATE, handleState);
     socket.on(SOCKET_EVENTS.QUEUE_UPDATED, handleState);
+    socket.on(SOCKET_EVENTS.QUEUE_RESET, handleReset);
     socket.emit("queue:sync");
 
     return () => {
       socket.off(SOCKET_EVENTS.QUEUE_STATE, handleState);
       socket.off(SOCKET_EVENTS.QUEUE_UPDATED, handleState);
+      socket.off(SOCKET_EVENTS.QUEUE_RESET, handleReset);
     };
-  }, [socket]);
+  }, [notify, socket]);
 
   const actions = useMemo(
     () => ({

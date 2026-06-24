@@ -1,6 +1,6 @@
 import type { PriorityLevel } from "./platform";
 
-export type PatientStatus = "waiting" | "serving" | "completed";
+export type PatientStatus = "waiting" | "serving" | "completed" | "missed";
 
 export interface Patient {
   id: string;

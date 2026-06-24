@@ -5,6 +5,15 @@ import { supabase } from "../config/supabase";
 const memoryPatients: Patient[] = [];
 let warnedAboutSupabaseFallback = false;
 let supabasePatientsAvailable = true;
+const patientSelect =
+  "id, token_number, patient_name, status, doctor_id, doctor_name, room, priority, appointment_time, consultation_start_time, consultation_end_time, phone_number, tracking_url, created_at";
+const resettableStatuses: PatientStatus[] = ["waiting", "serving", "completed", "missed"];
+
+export interface QueueResetResult {
+  resetTimestamp: string;
+  totalPatientsRemoved: number;
+  totalAppointmentsCleared: number;
+}
 
 function warnSupabaseFallback(error: unknown): void {
   supabasePatientsAvailable = false;
@@ -48,8 +57,49 @@ const priorityRank: Record<PriorityLevel, number> = {
 const statusRank: Record<PatientStatus, number> = {
   serving: 0,
   waiting: 1,
-  completed: 2
+  completed: 2,
+  missed: 3
 };
+
+function getLocalDateKey(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getLocalDayBounds(date = new Date()): { start: Date; end: Date; dateKey: string } {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  return { start, end, dateKey: getLocalDateKey(start) };
+}
+
+function isFutureAppointment(patient: Patient, today = new Date()): boolean {
+  if (!patient.appointmentTime) return false;
+  return new Date(patient.appointmentTime).getTime() >= getLocalDayBounds(today).end.getTime();
+}
+
+function getTokenScopeKey(patient: Patient): string {
+  return getLocalDateKey(patient.appointmentTime ?? patient.createdAt);
+}
+
+function getInputTokenScopeKey(input: CreatePatientInput): string {
+  return getLocalDateKey(input.appointmentTime ?? new Date());
+}
+
+function getNextToken(patients: Patient[], input: CreatePatientInput): number {
+  const tokenScopeKey = getInputTokenScopeKey(input);
+  return (
+    patients
+      .filter((patient) => getTokenScopeKey(patient) === tokenScopeKey)
+      .reduce((max, patient) => Math.max(max, patient.tokenNumber), 0) + 1
+  );
+}
+
+export function filterLiveQueuePatients(patients: Patient[], today = new Date()): Patient[] {
+  return patients.filter((patient) => !isFutureAppointment(patient, today));
+}
 
 function sortQueue(a: Patient, b: Patient): number {
   return (
@@ -67,7 +117,7 @@ export async function listPatients(): Promise<Patient[]> {
 
   const { data, error } = await supabase
     .from("patients")
-    .select("id, token_number, patient_name, status, doctor_id, doctor_name, room, priority, appointment_time, consultation_start_time, consultation_end_time, phone_number, tracking_url, created_at")
+    .select(patientSelect)
     .order("status", { ascending: false })
     .order("priority", { ascending: true })
     .order("token_number", { ascending: true });
@@ -81,27 +131,54 @@ export async function listPatients(): Promise<Patient[]> {
 }
 
 export async function findPatientByToken(tokenNumber: number): Promise<Patient | null> {
+  const todayKey = getLocalDayBounds().dateKey;
   if (!supabase || !supabasePatientsAvailable) {
-    return memoryPatients.find((patient) => patient.tokenNumber === tokenNumber) ?? null;
+    return (
+      memoryPatients.find(
+        (patient) =>
+          patient.tokenNumber === tokenNumber &&
+          getTokenScopeKey(patient) === todayKey &&
+          !isFutureAppointment(patient),
+      ) ??
+      memoryPatients.find((patient) => patient.tokenNumber === tokenNumber) ??
+      null
+    );
   }
 
   const { data, error } = await supabase
     .from("patients")
-    .select("id, token_number, patient_name, status, doctor_id, doctor_name, room, priority, appointment_time, consultation_start_time, consultation_end_time, phone_number, tracking_url, created_at")
+    .select(patientSelect)
     .eq("token_number", tokenNumber)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
 
   if (error) {
     warnSupabaseFallback(error);
-    return memoryPatients.find((patient) => patient.tokenNumber === tokenNumber) ?? null;
+    return (
+      memoryPatients.find(
+        (patient) =>
+          patient.tokenNumber === tokenNumber &&
+          getTokenScopeKey(patient) === todayKey &&
+          !isFutureAppointment(patient),
+      ) ??
+      memoryPatients.find((patient) => patient.tokenNumber === tokenNumber) ??
+      null
+    );
   }
 
-  return data ? toPatient(data as PatientRecord) : null;
+  const matches = (data ?? []).map((record) => toPatient(record as PatientRecord));
+  return (
+    matches.find(
+      (patient) =>
+        getTokenScopeKey(patient) === todayKey && !isFutureAppointment(patient),
+    ) ??
+    matches[0] ??
+    null
+  );
 }
 
 export async function createPatient(input: CreatePatientInput): Promise<Patient> {
   const patients = await listPatients();
-  const nextToken = patients.reduce((max, patient) => Math.max(max, patient.tokenNumber), 0) + 1;
+  const nextToken = getNextToken(patients, input);
   const doctorId = input.doctorId ?? defaultDoctorId;
   const doctorName = input.doctorName ?? "Dr. Asha Menon";
   const room = input.room ?? "A-101";
@@ -143,7 +220,7 @@ export async function createPatient(input: CreatePatientInput): Promise<Patient>
       phone_number: input.phoneNumber,
       tracking_url: trackingUrl
     })
-    .select("id, token_number, patient_name, status, doctor_id, doctor_name, room, priority, appointment_time, consultation_start_time, consultation_end_time, phone_number, tracking_url, created_at")
+    .select(patientSelect)
     .single();
 
   if (error) {
@@ -189,7 +266,7 @@ export async function updatePatientStatus(id: string, status: PatientStatus): Pr
       consultation_end_time: status === "completed" ? new Date().toISOString() : undefined
     })
     .eq("id", id)
-    .select("id, token_number, patient_name, status, doctor_id, doctor_name, room, priority, appointment_time, consultation_start_time, consultation_end_time, phone_number, tracking_url, created_at")
+    .select(patientSelect)
     .single();
 
   if (error) {
@@ -203,4 +280,59 @@ export async function updatePatientStatus(id: string, status: PatientStatus): Pr
   }
 
   return toPatient(data as PatientRecord);
+}
+
+export async function resetDailyQueue(now = new Date()): Promise<QueueResetResult> {
+  const { end } = getLocalDayBounds(now);
+  const resetTimestamp = now.toISOString();
+
+  if (!supabase || !supabasePatientsAvailable) {
+    const removedPatients = memoryPatients.filter(
+      (patient) =>
+        resettableStatuses.includes(patient.status) &&
+        (!patient.appointmentTime || new Date(patient.appointmentTime).getTime() < end.getTime()),
+    );
+    for (const patient of removedPatients) {
+      const index = memoryPatients.findIndex((item) => item.id === patient.id);
+      if (index >= 0) memoryPatients.splice(index, 1);
+    }
+
+    return {
+      resetTimestamp,
+      totalPatientsRemoved: removedPatients.length,
+      totalAppointmentsCleared: removedPatients.filter((patient) => patient.appointmentTime).length,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("patients")
+    .select(patientSelect)
+    .in("status", resettableStatuses)
+    .or(`appointment_time.is.null,appointment_time.lt.${end.toISOString()}`);
+
+  if (error) {
+    warnSupabaseFallback(error);
+    return resetDailyQueue(now);
+  }
+
+  const patientsToRemove = (data ?? []).map((record) => toPatient(record as PatientRecord));
+  const idsToRemove = patientsToRemove.map((patient) => patient.id);
+
+  if (idsToRemove.length) {
+    const { error: deleteError } = await supabase
+      .from("patients")
+      .delete()
+      .in("id", idsToRemove);
+
+    if (deleteError) {
+      warnSupabaseFallback(deleteError);
+      return resetDailyQueue(now);
+    }
+  }
+
+  return {
+    resetTimestamp,
+    totalPatientsRemoved: patientsToRemove.length,
+    totalAppointmentsCleared: patientsToRemove.filter((patient) => patient.appointmentTime).length,
+  };
 }

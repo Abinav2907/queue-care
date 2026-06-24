@@ -9,7 +9,8 @@ export function TokenCard({ patient, index }: { patient: Patient; index: number 
   const statusStyles = {
     waiting: "border-accent/30 bg-accent/10 text-accent",
     serving: "border-primary/30 bg-primary/10 text-primary",
-    completed: "border-white/10 bg-white/5 text-muted-foreground"
+    completed: "border-white/10 bg-white/5 text-muted-foreground",
+    missed: "border-destructive/30 bg-destructive/10 text-destructive"
   };
 
   return (

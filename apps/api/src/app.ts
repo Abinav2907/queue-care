@@ -1,11 +1,11 @@
 import cors from "cors";
 import express, { type Express } from "express";
-import { env } from "./config/env";
-import { errorHandler } from "./middleware/errorHandler";
-import { notFound } from "./middleware/notFound";
-import { healthRoutes } from "./routes/healthRoutes";
-import { patientRoutes } from "./routes/patientRoutes";
-import { queueRoutes } from "./routes/queueRoutes";
+import { env } from "./config/env.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import { notFound } from "./middleware/notFound.js";
+import { healthRoutes } from "./routes/healthRoutes.js";
+import { patientRoutes } from "./routes/patientRoutes.js";
+import { queueRoutes } from "./routes/queueRoutes.js";
 
 export function createApp(): Express {
   const app = express();

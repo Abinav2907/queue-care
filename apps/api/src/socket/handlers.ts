@@ -1,6 +1,6 @@
 import { SOCKET_EVENTS } from "@queue-cure/shared";
 import type { Server } from "socket.io";
-import { getQueueState } from "../services/queueService";
+import { getQueueState } from "../services/queueService.js";
 
 export function registerSocketHandlers(io: Server): void {
   io.on("connection", async (socket) => {

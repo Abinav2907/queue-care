@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { CreatePatientInput, Patient, PatientRecord, PatientStatus, PriorityLevel } from "@queue-cure/shared";
-import { supabase } from "../config/supabase";
+import { supabase } from "../config/supabase.js";
 
 const memoryPatients: Patient[] = [];
 let warnedAboutSupabaseFallback = false;

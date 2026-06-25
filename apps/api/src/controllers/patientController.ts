@@ -1,8 +1,8 @@
 import { createPatientSchema } from "@queue-cure/shared";
 import type { Request, Response } from "express";
-import { emitPatientAdded } from "../events/queueEvents";
-import { addPatient, getPatientQueueView, getQueueState } from "../services/queueService";
-import { HttpError } from "../utils/httpError";
+import { emitPatientAdded } from "../events/queueEvents.js";
+import { addPatient, getPatientQueueView, getQueueState } from "../services/queueService.js";
+import { HttpError } from "../utils/httpError.js";
 
 export async function listPatientsController(_req: Request, res: Response): Promise<void> {
   const queueState = await getQueueState();

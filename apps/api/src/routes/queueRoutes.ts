@@ -16,8 +16,8 @@ import {
   syncQueueController,
   updateDoctorController,
   updateSettingsController
-} from "../controllers/queueController";
-import { getPatientByTokenController } from "../controllers/patientController";
+} from "../controllers/queueController.js";
+import { getPatientByTokenController } from "../controllers/patientController.js";
 
 export const queueRoutes: ExpressRouter = Router();
 

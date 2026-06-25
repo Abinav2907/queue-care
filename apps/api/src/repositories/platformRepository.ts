@@ -9,8 +9,8 @@ import type {
   NotificationReceipt,
   NotificationRequest
 } from "@queue-cure/shared";
-import { supabase } from "../config/supabase";
-import { defaultDoctorId } from "./patientRepository";
+import { supabase } from "../config/supabase.js";
+import { defaultDoctorId } from "./patientRepository.js";
 
 const memoryDoctors: Doctor[] = [
   {

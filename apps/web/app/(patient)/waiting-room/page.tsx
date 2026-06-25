@@ -1,8 +1,15 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, MapPin, Search, Ticket } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import {
+  AlertCircle,
+  CheckCircle2,
+  MapPin,
+  Search,
+  Ticket,
+} from "lucide-react";
 import { motion } from "framer-motion";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CurrentToken } from "@/components/waiting-room/CurrentToken";
 import { EstimatedWaitTime } from "@/components/waiting-room/EstimatedWaitTime";
@@ -19,7 +26,6 @@ import type { PatientQueueView } from "@queue-cure/shared";
 const TRACKED_TOKEN_KEY = "queue-cure-tracked-token";
 
 export default function WaitingRoomPage() {
-  const searchParams = useSearchParams();
   const { queueState, loading, error, connected } = useQueue();
   const [tokenInput, setTokenInput] = useState("");
   const [trackedToken, setTrackedToken] = useState<number | null>(null);
@@ -28,7 +34,8 @@ export default function WaitingRoomPage() {
   const [trackingError, setTrackingError] = useState<string | null>(null);
 
   useEffect(() => {
-    const tokenFromUrl = searchParams.get("token");
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlSearchParams.get("token");
     if (tokenFromUrl) {
       const tokenNumber = Number(tokenFromUrl);
       if (Number.isInteger(tokenNumber) && tokenNumber > 0) {
@@ -47,7 +54,7 @@ export default function WaitingRoomPage() {
       setTrackedToken(tokenNumber);
       setTokenInput(String(tokenNumber));
     }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (!queueState || !trackedToken) return;
@@ -81,13 +88,16 @@ export default function WaitingRoomPage() {
       setTrackedToken(null);
       setTracking(null);
       window.localStorage.removeItem(TRACKED_TOKEN_KEY);
-      setTrackingError(err instanceof Error ? err.message : "Unable to track this token.");
+      setTrackingError(
+        err instanceof Error ? err.message : "Unable to track this token.",
+      );
     } finally {
       setTrackingLoading(false);
     }
   }
 
-  const currentServingPatient = tracking?.currentServingPatient ?? queueState?.currentToken ?? null;
+  const currentServingPatient =
+    tracking?.currentServingPatient ?? queueState?.currentToken ?? null;
   const currentToken = currentServingPatient?.tokenNumber ?? null;
   const display = useMemo(
     () => ({
@@ -95,9 +105,11 @@ export default function WaitingRoomPage() {
       tokensAhead: tracking?.tokensAhead ?? 0,
       estimatedWait: tracking?.estimatedWaitTime ?? 0,
       queuePosition: tracking?.queuePosition ?? null,
-      statusMessage: tracking?.statusMessage ?? "Enter your token number to track your position."
+      statusMessage:
+        tracking?.statusMessage ??
+        "Enter your token number to track your position.",
     }),
-    [tracking]
+    [tracking],
   );
 
   return (
@@ -118,7 +130,9 @@ export default function WaitingRoomPage() {
             </h1>
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-muted-foreground">
-            <span className={`size-2 rounded-full ${connected ? "bg-primary" : "bg-destructive"}`} />
+            <span
+              className={`size-2 rounded-full ${connected ? "bg-primary" : "bg-destructive"}`}
+            />
             {connected ? "Live" : "Offline"}
           </div>
         </motion.header>
@@ -135,13 +149,19 @@ export default function WaitingRoomPage() {
             <div className="h-80 animate-pulse rounded-lg bg-white/[0.06]" />
             <div className="space-y-4">
               {[0, 1, 2].map((item) => (
-                <div key={item} className="h-28 animate-pulse rounded-lg bg-white/[0.06]" />
+                <div
+                  key={item}
+                  className="h-28 animate-pulse rounded-lg bg-white/[0.06]"
+                />
               ))}
             </div>
           </div>
         ) : (
           <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
-            <CurrentToken token={currentToken} patient={currentServingPatient} />
+            <CurrentToken
+              token={currentToken}
+              patient={currentServingPatient}
+            />
             <div className="space-y-4">
               <Card className="p-5">
                 <form onSubmit={handleTrackPatient} className="space-y-3">
@@ -159,7 +179,11 @@ export default function WaitingRoomPage() {
                       aria-label="Enter your token number"
                     />
                   </label>
-                  <Button type="submit" loading={trackingLoading} className="w-full">
+                  <Button
+                    type="submit"
+                    loading={trackingLoading}
+                    className="w-full"
+                  >
                     <Search className="size-4" />
                     Track My Position
                   </Button>
@@ -170,17 +194,27 @@ export default function WaitingRoomPage() {
                   </p>
                 ) : null}
               </Card>
-              <Stat label="My Token Number" value={display.myToken ?? "--"} icon={Ticket} />
+              <Stat
+                label="My Token Number"
+                value={display.myToken ?? "--"}
+                icon={Ticket}
+              />
               <TokensAhead value={display.tokensAhead} />
               <EstimatedWaitTime minutes={display.estimatedWait} />
-              <Stat label="Queue Position" value={display.queuePosition ?? "--"} icon={MapPin} accent="text-accent" />
+              <Stat
+                label="Queue Position"
+                value={display.queuePosition ?? "--"}
+                icon={MapPin}
+                accent="text-accent"
+              />
               <Card className="p-5">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-1 size-5 text-primary" />
                   <div>
                     <p className="font-semibold">{display.statusMessage}</p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      This screen updates automatically through Socket.IO when reception calls the next token.
+                      This screen updates automatically through Socket.IO when
+                      reception calls the next token.
                     </p>
                   </div>
                 </div>

@@ -1,0 +1,17 @@
+import type { Request, Response } from "express";
+export declare function getQueueController(_req: Request, res: Response): Promise<void>;
+export declare function getActiveTokenController(_req: Request, res: Response): Promise<void>;
+export declare function getAnalyticsController(_req: Request, res: Response): Promise<void>;
+export declare function getSettingsController(_req: Request, res: Response): Promise<void>;
+export declare function callNextController(req: Request, res: Response): Promise<void>;
+export declare function completeConsultationController(req: Request, res: Response): Promise<void>;
+export declare function updateSettingsController(req: Request, res: Response): Promise<void>;
+export declare function syncQueueController(req: Request, res: Response): Promise<void>;
+export declare function getDoctorsController(_req: Request, res: Response): Promise<void>;
+export declare function updateDoctorController(req: Request, res: Response): Promise<void>;
+export declare function pauseQueueController(req: Request, res: Response): Promise<void>;
+export declare function resumeQueueController(req: Request, res: Response): Promise<void>;
+export declare function appointmentsController(_req: Request, res: Response): Promise<void>;
+export declare function createAppointmentController(req: Request, res: Response): Promise<void>;
+export declare function auditLogsController(_req: Request, res: Response): Promise<void>;
+export declare function notificationsController(req: Request, res: Response): Promise<void>;

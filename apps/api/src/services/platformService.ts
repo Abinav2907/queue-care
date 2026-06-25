@@ -13,8 +13,8 @@ import {
   listDoctors,
   queueNotification,
   updateDoctorAvailability
-} from "../repositories/platformRepository";
-import { HttpError } from "../utils/httpError";
+} from "../repositories/platformRepository.js";
+import { HttpError } from "../utils/httpError.js";
 
 const pausedDoctorIds = new Set<string>();
 

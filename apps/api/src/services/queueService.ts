@@ -11,13 +11,13 @@ import {
   listPatients,
   resetDailyQueue,
   updatePatientStatus,
-} from "../repositories/patientRepository";
+} from "../repositories/patientRepository.js";
 import {
   getSettings,
   updateSettings as persistSettings,
-} from "../repositories/settingsRepository";
-import { HttpError } from "../utils/httpError";
-import { getAnalytics } from "./waitTimeService";
+} from "../repositories/settingsRepository.js";
+import { HttpError } from "../utils/httpError.js";
+import { getAnalytics } from "./waitTimeService.js";
 import {
   assertQueueIsCallable,
   buildTimeline,
@@ -25,7 +25,7 @@ import {
   getDoctors,
   getPausedDoctorIds,
   predictWaitTimes,
-} from "./platformService";
+} from "./platformService.js";
 
 export async function getQueueState(): Promise<QueueState> {
   const [allPatients, settings, doctors, auditLogs] = await Promise.all([
@@ -107,7 +107,7 @@ export async function addPatient(input: CreatePatientInput): Promise<Patient> {
     doctorName: doctor?.name ?? input.doctorName,
     room: doctor?.room ?? input.room,
   });
-  const { addAuditLog } = await import("../repositories/platformRepository");
+  const { addAuditLog } = await import("../repositories/platformRepository.js");
   await addAuditLog("patient.created", "patient", patient.id, { ...patient });
   return patient;
 }
@@ -138,7 +138,7 @@ export async function callNextToken(doctorId?: string): Promise<Patient> {
   }
 
   const patient = await updatePatientStatus(nextPatient.id, "serving");
-  const { addAuditLog } = await import("../repositories/platformRepository");
+  const { addAuditLog } = await import("../repositories/platformRepository.js");
   await addAuditLog("patient.called", "patient", patient.id, {
     tokenNumber: patient.tokenNumber,
     doctorId: patient.doctorId,
@@ -166,7 +166,7 @@ export async function completeConsultation(doctorId: string): Promise<{
     activePatient.id,
     "completed",
   );
-  const { addAuditLog } = await import("../repositories/platformRepository");
+  const { addAuditLog } = await import("../repositories/platformRepository.js");
   await addAuditLog("patient.completed", "patient", completedPatient.id, {
     tokenNumber: completedPatient.tokenNumber,
     doctorId: completedPatient.doctorId,
@@ -210,7 +210,7 @@ export async function resetQueueForNewDay(): Promise<{
   queueState: QueueState;
 }> {
   const resetResult = await resetDailyQueue();
-  const { addAuditLog } = await import("../repositories/platformRepository");
+  const { addAuditLog } = await import("../repositories/platformRepository.js");
   await addAuditLog("QUEUE_RESET", "queue", null, {
     resetTimestamp: resetResult.resetTimestamp,
     totalPatientsRemoved: resetResult.totalPatientsRemoved,
@@ -281,7 +281,8 @@ export async function getPatientQueueView(
 
 function getPriorityWeight(patient: Patient): number {
   if (patient.priority === "emergency") return 0;
-  if (patient.priority === "urgent" || patient.priority === "priority") return 0.75;
+  if (patient.priority === "urgent" || patient.priority === "priority")
+    return 0.75;
   return 1;
 }
 
@@ -300,10 +301,12 @@ function calculateDoctorScopedWait(
           (item) =>
             item.id !== patient.id &&
             (item.status === "serving" ||
-              (item.status === "waiting" && item.tokenNumber < patient.tokenNumber)),
+              (item.status === "waiting" &&
+                item.tokenNumber < patient.tokenNumber)),
         )
         .reduce(
-          (total, item) => total + avgConsultationTime * getPriorityWeight(item),
+          (total, item) =>
+            total + avgConsultationTime * getPriorityWeight(item),
           0,
         ),
     ),

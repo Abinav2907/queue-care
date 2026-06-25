@@ -3,7 +3,7 @@ import {
   createPatientController,
   getPatientByTokenController,
   listPatientsController
-} from "../controllers/patientController";
+} from "../controllers/patientController.js";
 
 export const patientRoutes: ExpressRouter = Router();
 

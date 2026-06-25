@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import type { Server } from "socket.io";
-import { emitQueueReset } from "../events/queueEvents";
-import { resetQueueForNewDay } from "../services/queueService";
+import { emitQueueReset } from "../events/queueEvents.js";
+import { resetQueueForNewDay } from "../services/queueService.js";
 
 export function startDailyQueueResetJob(io: Server): void {
   cron.schedule("0 0 * * *", async () => {

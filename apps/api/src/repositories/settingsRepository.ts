@@ -1,5 +1,5 @@
 import type { QueueSettings, SettingsRecord } from "@queue-cure/shared";
-import { supabase } from "../config/supabase";
+import { supabase } from "../config/supabase.js";
 
 let memorySettings: QueueSettings = {
   avgConsultationTime: 10

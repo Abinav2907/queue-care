@@ -1,6 +1,11 @@
-import type { Patient } from "./patient";
-import type { AuditLog, Doctor, QueueTimelineItem, WaitTimePrediction } from "./platform";
-import type { QueueSettings } from "./settings";
+import type { Patient } from "./patient.ts";
+import type {
+  AuditLog,
+  Doctor,
+  QueueTimelineItem,
+  WaitTimePrediction,
+} from "./platform.ts";
+import type { QueueSettings } from "./settings.ts";
 
 export interface QueueAnalytics {
   totalWaiting: number;

@@ -1,0 +1,11 @@
+import type { Doctor, DoctorAvailability, NotificationReceipt, NotificationRequest, Patient, QueueTimelineItem, WaitTimePrediction } from "@queue-cure/shared";
+export declare function getDoctors(): Promise<Doctor[]>;
+export declare function setDoctorAvailability(doctorId: string, availability: DoctorAvailability): Promise<Doctor>;
+export declare function pauseQueue(doctorId: string): Promise<void>;
+export declare function resumeQueue(doctorId: string): Promise<void>;
+export declare function getPausedDoctorIds(): string[];
+export declare function getAuditLogs(): Promise<any>;
+export declare function notifyPatient(input: NotificationRequest): Promise<NotificationReceipt>;
+export declare function buildTimeline(queuePatients: Patient[], avgConsultationTime: number): QueueTimelineItem[];
+export declare function predictWaitTimes(queuePatients: Patient[], avgConsultationTime: number, activeDoctorCount: number): WaitTimePrediction[];
+export declare function assertQueueIsCallable(doctorId: string | undefined): void;

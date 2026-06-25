@@ -1,4 +1,4 @@
-import type { PriorityLevel } from "./platform";
+import type { PriorityLevel } from "./platform.js";
 
 export type PatientStatus = "waiting" | "serving" | "completed" | "missed";
 

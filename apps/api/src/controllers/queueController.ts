@@ -6,14 +6,14 @@ import {
   updateSettingsSchema
 } from "@queue-cure/shared";
 import type { Request, Response } from "express";
-import { emitQueueState, emitSettingsUpdated, emitTokenCalled } from "../events/queueEvents";
+import { emitQueueState, emitSettingsUpdated, emitTokenCalled } from "../events/queueEvents.js";
 import {
   addPatient,
   callNextToken,
   completeConsultation,
   getQueueState,
   updateSettings
-} from "../services/queueService";
+} from "../services/queueService.js";
 import {
   getAuditLogs,
   getDoctors,
@@ -21,8 +21,8 @@ import {
   pauseQueue,
   resumeQueue,
   setDoctorAvailability
-} from "../services/platformService";
-import { HttpError } from "../utils/httpError";
+} from "../services/platformService.js";
+import { HttpError } from "../utils/httpError.js";
 
 export async function getQueueController(_req: Request, res: Response): Promise<void> {
   res.json(await getQueueState());
